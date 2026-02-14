@@ -10,16 +10,25 @@ def _haversine_km(lat1, lon1, lat2, lon2):
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) ** 2
-         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
-         * math.sin(dlon / 2) ** 2)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class CommuteDetector:
-    def __init__(self, city_a=CITY_A, city_b=CITY_B, radius_km=RADIUS_KM,
-                 work_hour_start=WORK_HOUR_START, work_hour_end=WORK_HOUR_END,
-                 timezone=TIMEZONE):
+    def __init__(
+        self,
+        city_a=CITY_A,
+        city_b=CITY_B,
+        radius_km=RADIUS_KM,
+        work_hour_start=WORK_HOUR_START,
+        work_hour_end=WORK_HOUR_END,
+        timezone=TIMEZONE,
+    ):
         self.city_a = city_a
         self.city_b = city_b
         self.radius_km = radius_km
@@ -30,23 +39,28 @@ class CommuteDetector:
     def _near_city(self, latlng, city):
         if not latlng or len(latlng) < 2:
             return False
-        return _haversine_km(latlng[0], latlng[1], city["lat"], city["lon"]) <= self.radius_km
+        return (
+            _haversine_km(latlng[0], latlng[1], city["lat"], city["lon"])
+            <= self.radius_km
+        )
 
     def _parse_local_dt(self, activity):
         dt_utc = datetime.fromisoformat(activity["start_date"].replace("Z", "+00:00"))
         return dt_utc.astimezone(self.tz)
 
     def is_commute(self, activity):
-        if activity.get("sport_type") != "Ride":
-            return False
         start = activity.get("start_latlng")
         end = activity.get("end_latlng")
         if not start or not end:
             return False
 
         # Check location: start near one city, end near the other
-        a_to_b = self._near_city(start, self.city_a) and self._near_city(end, self.city_b)
-        b_to_a = self._near_city(start, self.city_b) and self._near_city(end, self.city_a)
+        a_to_b = self._near_city(start, self.city_a) and self._near_city(
+            end, self.city_b
+        )
+        b_to_a = self._near_city(start, self.city_b) and self._near_city(
+            end, self.city_a
+        )
         if not (a_to_b or b_to_a):
             return False
 
@@ -79,13 +93,15 @@ class CommuteDetector:
                 continue
             dep, arr = self.detect_departure_arrival(a)
             local_dt = self._parse_local_dt(a)
-            result.append({
-                "date": local_dt.date(),
-                "datetime": local_dt,
-                "departure": dep,
-                "arrival": arr,
-                "distance_km": a.get("distance", 0) / 1000,
-                "name": a.get("name", ""),
-            })
+            result.append(
+                {
+                    "date": local_dt.date(),
+                    "datetime": local_dt,
+                    "departure": dep,
+                    "arrival": arr,
+                    "distance_km": a.get("distance", 0) / 1000,
+                    "name": a.get("name", ""),
+                }
+            )
         result.sort(key=lambda x: x["datetime"])
         return result
