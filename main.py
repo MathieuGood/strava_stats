@@ -35,7 +35,9 @@ def main():
         detector = CommuteDetector()
         commutes = detector.get_commute_activities(activities)
         # Filter to requested month
-        commutes = [c for c in commutes if c["date"].year == year and c["date"].month == month]
+        commutes = [
+            c for c in commutes if c["date"].year == year and c["date"].month == month
+        ]
 
         if not commutes:
             print(f"No commute activities found for {year}-{month:02d}")
@@ -43,7 +45,9 @@ def main():
 
         report = CommuteReport(commutes, year, month)
         filepath = report.generate(output_dir=os.path.join(DATA_DIR, "reports"))
-        print(f"Generated report with {len(commutes)} trips over {len(set(c['date'] for c in commutes))} days")
+        print(
+            f"Generated report with {len(commutes)} trips over {len(set(c['date'] for c in commutes))} days"
+        )
         print(f"Total distance: {sum(c['distance_km'] for c in commutes):.1f} km")
         print(f"Saved to: {filepath}")
         return
@@ -68,6 +72,13 @@ def main():
     print(f"\n--- Biking in 2025 ---")
     biking_2025 = stats.by_sport("biking").by_year(2025)
     print(f"  {biking_2025.total_km():.1f} km")
+
+    print(f"\n--- Commute activities in 2025 ---")
+    detector = CommuteDetector()
+    commute_activities = detector.filter_commutes(storage.load())
+    commute_stats = ActivityStats(commute_activities).by_year(2025)
+    for sport, km in commute_stats.total_km_by_sport().items():
+        print(f"  {sport}: {km:.1f} km")
 
 
 if __name__ == "__main__":

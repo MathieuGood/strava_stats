@@ -67,6 +67,10 @@ class CommuteDetector:
             return self.city_a["name"], self.city_b["name"]
         return self.city_b["name"], self.city_a["name"]
 
+    def filter_commutes(self, activities):
+        """Return only activities that are commutes (raw, unmodified)."""
+        return [a for a in activities if self.is_commute(a)]
+
     def get_commute_activities(self, activities):
         """Filter and enrich activities with commute metadata."""
         result = []
