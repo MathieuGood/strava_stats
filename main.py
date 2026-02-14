@@ -2,6 +2,7 @@ import os
 import sys
 
 from strava import StravaAuth, StravaClient, ActivityStorage, ActivityStats
+from strava import CommuteDetector, CommuteReport
 
 DATA_DIR = os.path.dirname(__file__)
 
@@ -15,6 +16,37 @@ def main():
         activities = client.fetch_all_activities()
         print(f"\nFetched {len(activities)} activities total.")
         storage.save(activities)
+
+    # Check for --report flag
+    if "--report" in sys.argv:
+        idx = sys.argv.index("--report")
+        if idx + 1 >= len(sys.argv):
+            print("Usage: --report YYYY-MM")
+            sys.exit(1)
+        year_month = sys.argv[idx + 1]
+        try:
+            year, month = year_month.split("-")
+            year, month = int(year), int(month)
+        except ValueError:
+            print("Invalid format. Use --report YYYY-MM")
+            sys.exit(1)
+
+        activities = storage.load()
+        detector = CommuteDetector()
+        commutes = detector.get_commute_activities(activities)
+        # Filter to requested month
+        commutes = [c for c in commutes if c["date"].year == year and c["date"].month == month]
+
+        if not commutes:
+            print(f"No commute activities found for {year}-{month:02d}")
+            sys.exit(0)
+
+        report = CommuteReport(commutes, year, month)
+        filepath = report.generate(output_dir=os.path.join(DATA_DIR, "reports"))
+        print(f"Generated report with {len(commutes)} trips over {len(set(c['date'] for c in commutes))} days")
+        print(f"Total distance: {sum(c['distance_km'] for c in commutes):.1f} km")
+        print(f"Saved to: {filepath}")
+        return
 
     # Stats on all activities
     stats = ActivityStats(storage.load())
