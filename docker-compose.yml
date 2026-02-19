@@ -4,9 +4,10 @@ services:
       context: ./backend # Docker will look for backend code here
       dockerfile: ../Dockerfile.backend # Path to the backend Dockerfile
     ports:
-      - "8001:8000" # Map host port 8001 to container port 8000
+      - "8000:8000" # Map host port 8000 to container port 8000
     volumes:
       - ./backend:/app/backend # Mount the local backend code into the container for hot-reloading
+      - /app/backend/.venv # Preserve the Linux .venv built inside the container
     env_file:
       - ./backend/.env # Load Strava OAuth credentials
     environment:
@@ -18,7 +19,7 @@ services:
       context: ./frontend # Docker will look for frontend code here
       dockerfile: ../Dockerfile.frontend # Path to the frontend Dockerfile
     ports:
-      - "5174:5173" # Map host port 5174 to container port 5173 (Vite's default)
+      - "5173:5173" # Map host port 5173 to container port 5173 (Vite's default)
     volumes:
       - ./frontend:/app/frontend # Mount the local frontend code into the container for hot-reloading
       - /app/frontend/node_modules # Exclude node_modules from the host mount to prevent issues
