@@ -1,5 +1,5 @@
 {
-  "name": "strava_stats_fronted",
+  "name": "strava_stats_frontend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,19 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
-    "vue": "^3.5.28"
+    "@primeuix/themes": "^2.0.3",
+    "@primevue/themes": "^4.5.4",
+    "@tailwindcss/vite": "^4.1.18",
+    "echarts": "^6.0.0",
+    "primevue": "^4.5.4",
+    "tailwindcss": "^4.1.18",
+    "vue": "^3.5.28",
+    "vue-echarts": "^8.0.1",
+    "vue-router": "^4.2.12"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
@@ -19,6 +28,7 @@
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/tsconfig": "^0.8.1",
     "npm-run-all2": "^8.0.4",
+    "prettier": "3.8.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.6",
