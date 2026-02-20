@@ -24,6 +24,7 @@ const CHART_COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3
 
 const allRows = ref<MonthlyRow[]>([])
 const selectedSportsLine = ref<string[]>([])
+const selectedYearsLine = ref<number[]>([])
 const selectedSportsBar = ref<string[]>([])
 
 // --- Data fetching ---
@@ -40,16 +41,24 @@ const sportOptions = computed(() =>
         .map((s) => ({ label: s, value: s })),
 )
 
-/** Filter raw rows by selected sport types. Empty selection = all sports. */
-const filteredBySports = (selectedSports: string[]): MonthlyRow[] => {
-    if (selectedSports.length === 0) return allRows.value
-    return allRows.value.filter((r) => selectedSports.includes(r.sport_type))
+const yearOptions = computed(() =>
+    [...new Set(allRows.value.map((r) => r.year))]
+        .sort((a, b) => b - a)
+        .map((y) => ({ label: String(y), value: y })),
+)
+
+/** Filter raw rows by selected sport types and optionally years. Empty selection = all. */
+const filteredBySports = (selectedSports: string[], selectedYears: number[] = []): MonthlyRow[] => {
+    let rows = allRows.value
+    if (selectedSports.length > 0) rows = rows.filter((r) => selectedSports.includes(r.sport_type))
+    if (selectedYears.length > 0) rows = rows.filter((r) => selectedYears.includes(r.year))
+    return rows
 }
 
 // --- Line chart: monthly km per year ---
 
 const lineChartOption = computed(() => {
-    const source = filteredBySports(selectedSportsLine.value)
+    const source = filteredBySports(selectedSportsLine.value, selectedYearsLine.value)
 
     // Group by year → month → summed km
     const byYear = new Map<number, Map<number, number>>()
@@ -124,7 +133,7 @@ const barChartOption = computed(() => {
     <div class="p-4 flex flex-col gap-10">
         <!-- Line chart: monthly distances per year -->
         <div class="flex flex-col gap-3">
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 flex-wrap">
                 <MultiSelect
                     v-model="selectedSportsLine"
                     :options="sportOptions"
@@ -135,6 +144,15 @@ const barChartOption = computed(() => {
                     filter
                     autoFilterFocus
                     class="w-full md:w-80"
+                />
+                <MultiSelect
+                    v-model="selectedYearsLine"
+                    :options="yearOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="All Years"
+                    display="chip"
+                    class="w-full md:w-60"
                 />
             </div>
             <div class="h-96">
