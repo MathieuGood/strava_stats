@@ -3,9 +3,11 @@
 from collections import defaultdict
 from datetime import datetime
 
-from fastapi import APIRouter
+from anyio import to_thread
+from fastapi import APIRouter, HTTPException
 
-from api.loader import get_activities
+from api.loader import DATA_PATH, get_activities, load_activities
+from strava import ActivityStorage, StravaAuth, StravaClient
 
 router = APIRouter(prefix="/activities", tags=["activities"])
 
@@ -39,3 +41,22 @@ async def get_monthly_totals():
 
     result.sort(key=lambda r: (r["year"], r["month"]), reverse=True)
     return result
+
+
+@router.post("/fetch")
+async def fetch_from_strava():
+    """Fetch all activities from the Strava API, persist to disk, and reload the cache."""
+    def _do_fetch() -> int:
+        auth = StravaAuth()
+        client = StravaClient(auth)
+        activities = client.fetch_all_activities()
+        ActivityStorage(DATA_PATH).save(activities)
+        load_activities()
+        return len(activities)
+
+    try:
+        count = await to_thread.run_sync(_do_fetch)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"fetched": count}
