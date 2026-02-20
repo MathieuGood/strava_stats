@@ -1,3 +1,4 @@
+import io
 import os
 from collections import defaultdict
 
@@ -22,21 +23,14 @@ class CommuteReport:
             days[d]["trips"].append(a)
         return dict(sorted(days.items()))
 
-    def generate(self, output_dir="reports"):
-        os.makedirs(output_dir, exist_ok=True)
-        filename = f"Indemnité_KM_mobilite_velo_MB_{self.year}_{self.month:02d}.xlsx"
-        filepath = os.path.join(output_dir, filename)
-
+    def _build_workbook(self) -> Workbook:
         wb = Workbook()
         ws = wb.active
         ws.title = "Indemnité km vélo"
 
-        # Column headers
-        headers = [
-            "Date", "Jour", "Trajet Aller", "Trajet Retour",
-            "Motif", "Distance (km)", "Indemnité/km", "Indemnité (€)"
-        ]
-        header_font = Font(bold=True)
+        arial = Font(name="Arial", size=11)
+        header_font = Font(name="Arial", size=11, bold=True)
+        total_font = Font(name="Arial", size=11, bold=True)
         header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
         thin_border = Border(
             left=Side(style="thin"),
@@ -45,6 +39,11 @@ class CommuteReport:
             bottom=Side(style="thin"),
         )
 
+        # Column headers
+        headers = [
+            "Date", "Jour", "Trajet Aller", "Trajet Retour",
+            "Motif", "Distance (km)", "Indemnité/km", "Indemnité (€)"
+        ]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -63,37 +62,38 @@ class CommuteReport:
             if len(trips) > 1:
                 retour = f"{trips[-1]['departure']} → {trips[-1]['arrival']}"
 
-            ws.cell(row=row, column=1, value=date).number_format = "DD/MM/YYYY"
-            ws.cell(row=row, column=1).border = thin_border
-            # Day name formula: =TEXT(A2, "jjjj")
-            ws.cell(row=row, column=2).value = f'=TEXT(A{row},"jjjj")'
-            ws.cell(row=row, column=2).border = thin_border
-            ws.cell(row=row, column=3, value=aller).border = thin_border
-            ws.cell(row=row, column=4, value=retour).border = thin_border
-            ws.cell(row=row, column=5, value="Trajet domicile-travail").border = thin_border
-            ws.cell(row=row, column=6, value=round(info["distance_km"], 2)).border = thin_border
-            ws.cell(row=row, column=6).number_format = "0.00"
-            ws.cell(row=row, column=7, value=RATE_PER_KM).border = thin_border
-            ws.cell(row=row, column=7).number_format = "0.00"
-            # Indemnité formula: =F*G
-            ws.cell(row=row, column=8).value = f"=F{row}*G{row}"
-            ws.cell(row=row, column=8).number_format = "0.00"
-            ws.cell(row=row, column=8).border = thin_border
+            def c(col):
+                cell = ws.cell(row=row, column=col)
+                cell.font = arial
+                cell.border = thin_border
+                return cell
+
+            c(1).value = date
+            c(1).number_format = "DD/MM/YYYY"
+            c(2).value = f'=TEXT(A{row},"jjjj")'
+            c(3).value = aller
+            c(4).value = retour
+            c(5).value = "Trajet domicile-travail"
+            c(6).value = round(info["distance_km"], 2)
+            c(6).number_format = "0.00"
+            c(7).value = RATE_PER_KM
+            c(7).number_format = "0.00"
+            c(8).value = f"=F{row}*G{row}"
+            c(8).number_format = "0.00"
 
             row += 1
 
         # TOTAL row
         total_row = row
-        total_font = Font(bold=True)
         ws.cell(row=total_row, column=5, value="TOTAL").font = total_font
         ws.cell(row=total_row, column=5).border = thin_border
         ws.cell(row=total_row, column=5).alignment = Alignment(horizontal="right")
         ws.cell(row=total_row, column=6).value = f"=SUM(F2:F{total_row - 1})"
-        ws.cell(row=total_row, column=6).number_format = "0.00"
+        ws.cell(row=total_row, column=6).number_format = '0.00" km"'
         ws.cell(row=total_row, column=6).font = total_font
         ws.cell(row=total_row, column=6).border = thin_border
         ws.cell(row=total_row, column=8).value = f"=SUM(H2:H{total_row - 1})"
-        ws.cell(row=total_row, column=8).number_format = "0.00"
+        ws.cell(row=total_row, column=8).number_format = '0.00" €"'
         ws.cell(row=total_row, column=8).font = total_font
         ws.cell(row=total_row, column=8).border = thin_border
 
@@ -102,5 +102,18 @@ class CommuteReport:
         for i, w in enumerate(col_widths, 1):
             ws.column_dimensions[chr(64 + i)].width = w
 
-        wb.save(filepath)
+        return wb
+
+    def generate(self, output_dir="reports"):
+        os.makedirs(output_dir, exist_ok=True)
+        filename = f"Indemnité_KM_mobilite_velo_MB_{self.year}_{self.month:02d}.xlsx"
+        filepath = os.path.join(output_dir, filename)
+        self._build_workbook().save(filepath)
         return filepath
+
+    def generate_to_bytes(self) -> bytes:
+        """Generate the workbook and return raw bytes (for HTTP streaming)."""
+        buffer = io.BytesIO()
+        self._build_workbook().save(buffer)
+        buffer.seek(0)
+        return buffer.getvalue()
