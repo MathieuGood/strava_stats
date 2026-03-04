@@ -25,6 +25,10 @@ class StravaAuth:
             self._refresh()
         return self._access_token
 
+    def force_refresh(self):
+        """Force a token refresh regardless of expiry (e.g. after a 401)."""
+        self._refresh()
+
     def _refresh(self):
         print("Access token expired, refreshing...")
         resp = requests.post(

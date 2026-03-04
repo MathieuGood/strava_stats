@@ -38,6 +38,14 @@ class StravaClient:
                 headers=self._headers,
                 params=params,
             )
+            if resp.status_code == 401:
+                print("Got 401, forcing token refresh and retrying...")
+                self._auth.force_refresh()
+                resp = self._session.get(
+                    f"{self.BASE_URL}/athlete/activities",
+                    headers=self._headers,
+                    params=params,
+                )
             resp.raise_for_status()
             batch = resp.json()
 

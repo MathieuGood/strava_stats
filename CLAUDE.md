@@ -83,21 +83,26 @@ This applies to both the CLI (`--report YYYY-MM`) and the web `/activities/repor
 
 ## Commands
 
+Both servers must run simultaneously in separate terminals for the web UI to work.
+
 ```bash
-# Run backend (dev)
+# Terminal 1 — backend (must be running before opening the frontend)
 cd backend && uvicorn api.app:app --reload
 
-# Run frontend (dev)
+# Terminal 2 — frontend
 cd frontend && npm run dev
 
-# Docker (full stack)
+# Docker (full stack — runs both automatically)
 docker-compose up
 
 # CLI: fetch all activities from Strava API
-cd backend && python main.py --fetch
+cd backend && uv run main.py --fetch
 
 # CLI: generate monthly Excel report
-cd backend && python main.py --report YYYY-MM
+cd backend && uv run main.py --report YYYY-MM
+
+# Re-authorize Strava from scratch (if tokens are fully invalid)
+cd backend && uv run reauth.py
 ```
 
 ---
@@ -134,6 +139,8 @@ EXPIRES_AT=<unix_timestamp>
 ```
 
 > **Note:** Strava uses **rotating refresh tokens** — each refresh invalidates the previous refresh token and issues a new one. If working across multiple machines, always keep the `.env` in sync with the machine that last performed a successful fetch. `StravaAuth` uses `load_dotenv(override=True)` and updates `os.environ` after every persist to ensure token state stays consistent within a running process.
+>
+> `StravaClient` automatically retries once on 401 by calling `auth.force_refresh()`, recovering from stale tokens without manual intervention. If tokens are fully invalidated (app deauthorized on Strava's side), run `uv run reauth.py` to go through the OAuth flow and write fresh tokens to `.env`.
 
 ---
 

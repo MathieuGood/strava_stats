@@ -1,10 +1,10 @@
 import './css/styles.css'
 import { createApp } from 'vue'
 import PrimeVue from 'primevue/config'
-import Aura from '@primevue/themes/aura'
+import Aura from '@primeuix/themes/aura'
 import App from './App.vue'
 import router from './router'
-import { definePreset } from '@primevue/themes'
+import { definePreset } from '@primeuix/themes'
 
 const MidnightAmber = definePreset(Aura, {
     semantic: {
