@@ -10,13 +10,14 @@ class StravaAuth:
 
     def __init__(self, env_path=None):
         self._env_path = env_path or os.path.join(os.path.dirname(__file__), "..", ".env")
-        load_dotenv(self._env_path)
+        load_dotenv(self._env_path, override=True)
 
         self._client_id = os.environ["CLIENT_ID"]
         self._client_secret = os.environ["CLIENT_SECRET"]
         self._access_token = os.environ["ACCESS_TOKEN"]
         self._refresh_token = os.environ["REFRESH_TOKEN"]
-        self._expires_at = int(os.environ["EXPIRES_AT"])
+        expires_at_raw = os.environ.get("EXPIRES_AT", "")
+        self._expires_at = int(expires_at_raw) if expires_at_raw and expires_at_raw != "None" else 0
 
     @property
     def access_token(self):
@@ -51,3 +52,6 @@ class StravaAuth:
             f.write(f"ACCESS_TOKEN={self._access_token}\n")
             f.write(f"REFRESH_TOKEN={self._refresh_token}\n")
             f.write(f"EXPIRES_AT={self._expires_at}\n")
+        os.environ["ACCESS_TOKEN"] = self._access_token
+        os.environ["REFRESH_TOKEN"] = self._refresh_token
+        os.environ["EXPIRES_AT"] = str(self._expires_at)

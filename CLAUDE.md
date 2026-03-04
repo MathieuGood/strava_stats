@@ -12,13 +12,12 @@ The primary use case is tracking bike commutes between **Geispolsheim** and **St
 
 ```
 strava_stats/
-├── main.py                  # CLI entry point (legacy)
-├── pyproject.toml           # Root CLI dependencies
 ├── docker-compose.yml       # Multi-container setup (backend + frontend)
 ├── Dockerfile.backend
 ├── Dockerfile.frontend
 │
-├── backend/                 # FastAPI REST API
+├── backend/                 # FastAPI REST API + CLI
+│   ├── main.py              # CLI entry point (--fetch, --report)
 │   ├── activities.json      # Cached Strava activities (source of truth)
 │   ├── pyproject.toml
 │   ├── .env                 # Strava OAuth credentials (never commit)
@@ -28,7 +27,7 @@ strava_stats/
 │   │   └── routes/
 │   │       ├── base.py      # Health check endpoints
 │   │       └── activities.py # Activity endpoints (monthly totals, fetch, report)
-│   └── strava/              # Strava logic package (mirrored from root /strava)
+│   └── strava/              # Strava logic package (single source of truth)
 │       ├── __init__.py      # Public exports
 │       ├── auth.py          # OAuth token management + auto-refresh
 │       ├── client.py        # Strava REST API client (paginated fetch)
@@ -95,10 +94,10 @@ cd frontend && npm run dev
 docker-compose up
 
 # CLI: fetch all activities from Strava API
-python main.py --fetch
+cd backend && python main.py --fetch
 
 # CLI: generate monthly Excel report
-python main.py --report YYYY-MM
+cd backend && python main.py --report YYYY-MM
 ```
 
 ---
@@ -176,7 +175,7 @@ ActivityStorage  — persists to / loads from backend/activities.json
 
 ---
 
-## Commute Detection Logic (`strava/commute.py`)
+## Commute Detection Logic (`backend/strava/commute.py`)
 
 An activity is a commute if **all** of the following are true:
 
@@ -189,7 +188,7 @@ The `CommuteDetector` class is configurable — cities, radius, and hours can be
 
 ---
 
-## Excel Report (`strava/report.py`)
+## Excel Report (`backend/strava/report.py`)
 
 Output filename: `Indemnité_KM_mobilite_velo_MB_YYYY_MM.xlsx`
 
@@ -204,7 +203,7 @@ Columns:
 
 ---
 
-## Sport Aliases (`strava/sports.py`)
+## Sport Aliases (`backend/strava/sports.py`)
 
 | Alias(es)                            | Strava Type      |
 |--------------------------------------|------------------|
