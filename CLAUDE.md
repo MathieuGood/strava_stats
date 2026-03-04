@@ -46,7 +46,7 @@ strava_stats/
         ├── components/
         │   └── Header.vue   # Nav bar + "Fetch new data" button
         ├── pages/
-        │   ├── Home.vue     # Monthly totals table with sport filter
+        │   ├── Home.vue     # Pivot table: years × months km grid with sport filter
         │   ├── Charts.vue   # ECharts line/bar charts with sport + year filters
         │   └── Reports.vue  # Report download page with month dropdown
         ├── fetch/
@@ -132,6 +132,8 @@ ACCESS_TOKEN=<strava_access_token>
 REFRESH_TOKEN=<strava_refresh_token>
 EXPIRES_AT=<unix_timestamp>
 ```
+
+> **Note:** Strava uses **rotating refresh tokens** — each refresh invalidates the previous refresh token and issues a new one. If working across multiple machines, always keep the `.env` in sync with the machine that last performed a successful fetch. `StravaAuth` uses `load_dotenv(override=True)` and updates `os.environ` after every persist to ensure token state stays consistent within a running process.
 
 ---
 
@@ -224,3 +226,4 @@ Columns:
 - Dates parsed from ISO 8601 UTC strings; timezone conversion uses `zoneinfo.ZoneInfo`
 - `backend/activities.json` is the single source of truth for local data
 - Backend uses `anyio.to_thread.run_sync()` to run sync Strava/openpyxl code without blocking the event loop
+- `StravaAuth` calls `load_dotenv(override=True)` so re-instantiation always picks up the latest token from disk; `_persist()` also writes new tokens directly to `os.environ` to keep in-process state consistent
