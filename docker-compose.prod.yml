@@ -1,0 +1,23 @@
+services:
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend.prod
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+    expose:
+      - "8000"
+    volumes:
+      - ./backend/.env:/app/backend/.env           # writable — tokens are refreshed and written back
+      - ./backend/activities.json:/app/backend/activities.json  # persists fetched data across restarts
+    environment:
+      PYTHONUNBUFFERED: 1
+    restart: unless-stopped
