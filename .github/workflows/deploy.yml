@@ -19,4 +19,16 @@ jobs:
                   script: |
                       cd ~/apps/strava_stats
                       git pull origin main
+                      if [ ! -f backend/.env ]; then
+                          printf 'CLIENT_ID=%s\nCLIENT_SECRET=%s\nACCESS_TOKEN=%s\nREFRESH_TOKEN=%s\nEXPIRES_AT=%s\n' \
+                              '${{ secrets.STRAVA_CLIENT_ID }}' \
+                              '${{ secrets.STRAVA_CLIENT_SECRET }}' \
+                              '${{ secrets.STRAVA_ACCESS_TOKEN }}' \
+                              '${{ secrets.STRAVA_REFRESH_TOKEN }}' \
+                              '${{ secrets.STRAVA_EXPIRES_AT }}' \
+                              > backend/.env
+                      fi
+                      if [ ! -f backend/activities.json ]; then
+                          echo '[]' > backend/activities.json
+                      fi
                       docker compose -f docker-compose.prod.yml up -d --build
