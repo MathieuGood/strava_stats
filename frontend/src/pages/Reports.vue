@@ -15,7 +15,7 @@ const error = ref<string | null>(null)
 
 onMounted(async () => {
     months.value = await fetchCommuteMonths()
-    if (months.value.length > 0) selectedMonth.value = months.value[0]
+    if (months.value.length > 0) selectedMonth.value = months.value[0] ?? null
 })
 
 const periodLabel = computed(() => {
