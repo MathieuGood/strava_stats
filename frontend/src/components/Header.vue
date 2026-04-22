@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { triggerFetch } from '../fetch/fetchActivities'
 
 const loading = ref(false)
-const success = ref(false)
-const error = ref<string | null>(null)
+const toast = useToast()
 
 async function fetchData() {
     loading.value = true
-    error.value = null
-    success.value = false
+    toast.add({ severity: 'info', summary: 'Fetching data...', detail: 'Syncing with Strava API', life: 30000 })
     try {
-        await triggerFetch()
-        success.value = true
-        setTimeout(() => {
-            success.value = false
-        }, 3000)
+        const { fetched } = await triggerFetch()
+        toast.removeAllGroups()
+        toast.add({ severity: 'success', summary: 'Done!', detail: `${fetched} activities loaded`, life: 4000 })
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed'
+        toast.removeAllGroups()
+        toast.add({ severity: 'error', summary: 'Fetch failed', detail: e instanceof Error ? e.message : 'Unknown error', life: 5000 })
     } finally {
         loading.value = false
     }
@@ -38,8 +36,6 @@ async function fetchData() {
             >
                 {{ loading ? 'Fetching...' : 'Fetch new data' }}
             </button>
-            <span v-if="success" class="text-green-400 text-sm">Done!</span>
-            <span v-if="error" class="text-red-400 text-sm">Error</span>
         </nav>
     </div>
 </template>
