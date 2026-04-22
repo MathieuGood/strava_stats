@@ -1,1 +1,48 @@
 @import 'tailwindcss';
+
+/* Toast overrides — MidnightAmber dark theme */
+.p-toast .p-toast-message {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 0.5rem;
+    color: #f1f5f9;
+    box-shadow: 0 4px 24px 0 rgba(0,0,0,0.5);
+}
+
+.p-toast .p-toast-message.p-toast-message-info {
+    border-left: 4px solid #f59e0b;
+}
+
+.p-toast .p-toast-message.p-toast-message-success {
+    border-left: 4px solid #4ade80;
+}
+
+.p-toast .p-toast-message.p-toast-message-error {
+    border-left: 4px solid #f87171;
+}
+
+.p-toast .p-toast-summary {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.p-toast .p-toast-detail {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.p-toast .p-toast-message-icon {
+    color: inherit;
+}
+
+.p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon { color: #f59e0b; }
+.p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon { color: #4ade80; }
+.p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon { color: #f87171; }
+
+.p-toast .p-toast-close-button {
+    color: #64748b;
+}
+.p-toast .p-toast-close-button:hover {
+    color: #f1f5f9;
+    background: #334155;
+}
