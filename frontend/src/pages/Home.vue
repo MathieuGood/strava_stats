@@ -2,18 +2,19 @@
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import MultiSelect from 'primevue/multiselect'
-import { ref, computed, onMounted } from 'vue'
-import { fetchMonthlyTotals, type MonthlyRow } from '@/fetch/fetchActivities'
+import { computed, onMounted } from 'vue'
+import { ref } from 'vue'
+import { useActivities } from '@/composables/useActivities'
 
 // --- State ---
 
-const allRows = ref<MonthlyRow[]>([])
+const { allRows, reload } = useActivities()
 const selectedSports = ref<string[]>([])
 
 // --- Data fetching ---
 
 onMounted(async () => {
-    allRows.value = await fetchMonthlyTotals()
+    if (allRows.value.length === 0) await reload()
 })
 
 // --- Derived data ---

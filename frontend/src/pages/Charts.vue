@@ -12,7 +12,8 @@ import {
 import VChart from 'vue-echarts'
 import MultiSelect from 'primevue/multiselect'
 import { ref, computed, onMounted } from 'vue'
-import { fetchMonthlyTotals, type MonthlyRow } from '@/fetch/fetchActivities'
+import { useActivities } from '@/composables/useActivities'
+import type { MonthlyRow } from '@/fetch/fetchActivities'
 
 // ECharts tree-shaking: register only the modules this page needs
 use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, DataZoomComponent])
@@ -22,7 +23,7 @@ const CHART_COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3
 
 // --- State ---
 
-const allRows = ref<MonthlyRow[]>([])
+const { allRows, reload } = useActivities()
 const selectedSportsLine = ref<string[]>([])
 const selectedYearsLine = ref<number[]>([])
 const selectedSportsBar = ref<string[]>([])
@@ -30,7 +31,7 @@ const selectedSportsBar = ref<string[]>([])
 // --- Data fetching ---
 
 onMounted(async () => {
-    allRows.value = await fetchMonthlyTotals()
+    if (allRows.value.length === 0) await reload()
 })
 
 // --- Derived data ---

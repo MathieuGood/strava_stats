@@ -2,15 +2,18 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { triggerFetch } from '../fetch/fetchActivities'
+import { useActivities } from '@/composables/useActivities'
 
 const loading = ref(false)
 const toast = useToast()
+const { reload } = useActivities()
 
 async function fetchData() {
     loading.value = true
     toast.add({ severity: 'info', summary: 'Fetching data...', detail: 'Syncing with Strava API', life: 30000 })
     try {
         const { fetched } = await triggerFetch()
+        await reload()
         toast.removeAllGroups()
         toast.add({ severity: 'success', summary: 'Done!', detail: `${fetched} activities loaded`, life: 4000 })
     } catch (e) {
