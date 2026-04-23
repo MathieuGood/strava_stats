@@ -203,10 +203,6 @@ const hasActiveFilters = computed(() =>
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }">
                 <template #body="{ data }">{{ data.avg_heartrate ?? '—' }}</template>
             </Column>
-            <Column field="commute" header="Commute" sortable style="width: 85px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
-                <template #body="{ data }">{{ data.commute ? '✓' : '' }}</template>
-            </Column>
         </DataTable>
     </div>
 </template>
