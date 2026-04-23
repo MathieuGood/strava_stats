@@ -30,13 +30,13 @@ onMounted(async () => {
 })
 
 const yearOptions = computed(() =>
-    [...new Set(allActivities.value.map((a) => a.year))]
+    [...new Set(allActivities.value.map(getYear))]
         .sort((a, b) => b - a)
         .map((y) => ({ label: String(y), value: y }))
 )
 
 const monthOptions = computed(() =>
-    [...new Set(allActivities.value.map((a) => a.month))]
+    [...new Set(allActivities.value.map(getMonth))]
         .sort((a, b) => a - b)
         .map((m) => ({ label: MONTH_NAMES[m - 1], value: m }))
 )
@@ -47,13 +47,16 @@ const sportOptions = computed(() =>
         .map((s) => ({ label: s, value: s }))
 )
 
+function getYear(a: ActivityDetail) { return parseInt(a.datetime.slice(0, 4)) }
+function getMonth(a: ActivityDetail) { return parseInt(a.datetime.slice(5, 7)) }
+
 const filtered = computed(() => {
     let result = allActivities.value
 
     if (selectedYears.value.length > 0)
-        result = result.filter((a) => selectedYears.value.includes(a.year))
+        result = result.filter((a) => selectedYears.value.includes(getYear(a)))
     if (selectedMonths.value.length > 0)
-        result = result.filter((a) => selectedMonths.value.includes(a.month))
+        result = result.filter((a) => selectedMonths.value.includes(getMonth(a)))
     if (selectedSports.value.length > 0)
         result = result.filter((a) => selectedSports.value.includes(a.sport_type))
     if (commuteOnly.value)
@@ -177,18 +180,11 @@ const hasActiveFilters = computed(() =>
             scrollable
             scrollHeight="calc(100vh - 180px)"
             :virtualScrollerOptions="{ itemSize: 36 }"
-            sortField="date"
-            :sortOrder="1"
+            sortField="datetime"
+            :sortOrder="-1"
             class="text-sm"
         >
-            <Column field="year" header="Year" sortable style="width: 70px" />
-            <Column field="month" header="Month" sortable style="width: 75px">
-                <template #body="{ data }">{{ MONTH_NAMES[data.month - 1] }}</template>
-            </Column>
-            <Column field="day" header="Day" sortable style="width: 60px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
-            <Column field="start_time" header="Start" style="width: 70px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
+            <Column field="datetime" header="Date" sortable style="width: 145px" />
             <Column field="end_time" header="End" style="width: 70px"
                 :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
             <Column field="name" header="Name" sortable />

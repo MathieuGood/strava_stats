@@ -31,11 +31,7 @@ async def get_all_activities_detail():
         end_dt = start_dt + timedelta(seconds=elapsed)
         result.append({
             "id": a.get("id"),
-            "date": a["start_date_local"][:10],
-            "year": start_dt.year,
-            "month": start_dt.month,
-            "day": start_dt.day,
-            "start_time": start_dt.strftime("%H:%M"),
+            "datetime": start_dt.strftime("%Y-%m-%d %H:%M"),
             "end_time": end_dt.strftime("%H:%M"),
             "name": a.get("name"),
             "sport_type": a.get("sport_type"),
