@@ -38,6 +38,9 @@ export const fetchCommuteMonths = async (): Promise<CommuteMonth[]> => {
 export interface ActivityDetail {
     id: number
     date: string
+    year: number
+    month: number
+    day: number
     start_time: string
     end_time: string
     name: string
@@ -48,6 +51,12 @@ export interface ActivityDetail {
     avg_speed_kmh: number
     avg_heartrate: number | null
     commute: boolean
+}
+
+export const fetchAllActivitiesDetail = async (): Promise<ActivityDetail[]> => {
+    const response = await fetch(`${API_URL}${ACTIVITIES_ENDPOINT}/all-detail`)
+    if (!response.ok) throw new Error('Failed to fetch activities')
+    return response.json()
 }
 
 export const fetchActivitiesByMonth = async (year: number, month: number): Promise<ActivityDetail[]> => {

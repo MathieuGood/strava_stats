@@ -1,58 +1,75 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import Select from 'primevue/select'
+import { ref, computed, onMounted } from 'vue'
+import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import MultiSelect from 'primevue/multiselect'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { useActivities } from '@/composables/useActivities'
-import { fetchActivitiesByMonth, type ActivityDetail } from '@/fetch/fetchActivities'
+import { fetchAllActivitiesDetail, type ActivityDetail } from '@/fetch/fetchActivities'
 
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December']
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-const { allRows, reload } = useActivities()
-const activities = ref<ActivityDetail[]>([])
+const allActivities = ref<ActivityDetail[]>([])
 const loading = ref(false)
 
+const search = ref('')
 const selectedYears = ref<number[]>([])
-const selectedMonth = ref<number | null>(null)
+const selectedMonths = ref<number[]>([])
+const selectedSports = ref<string[]>([])
+const commuteOnly = ref(false)
 
 onMounted(async () => {
-    if (allRows.value.length === 0) await reload()
-    if (yearOptions.value.length > 0) selectedYears.value = [yearOptions.value[0]?.value ?? 0]
+    loading.value = true
+    try {
+        allActivities.value = await fetchAllActivitiesDetail()
+    } finally {
+        loading.value = false
+    }
 })
 
 const yearOptions = computed(() =>
-    [...new Set(allRows.value.map((r) => r.year))]
+    [...new Set(allActivities.value.map((a) => a.year))]
         .sort((a, b) => b - a)
         .map((y) => ({ label: String(y), value: y }))
 )
 
-const monthOptions = computed(() => {
-    const months = [...new Set(allRows.value.map((r) => r.month))].sort((a, b) => b - a)
-    return months.map((m) => ({ label: MONTH_NAMES[m - 1], value: m }))
+const monthOptions = computed(() =>
+    [...new Set(allActivities.value.map((a) => a.month))]
+        .sort((a, b) => a - b)
+        .map((m) => ({ label: MONTH_NAMES[m - 1], value: m }))
+)
+
+const sportOptions = computed(() =>
+    [...new Set(allActivities.value.map((a) => a.sport_type))]
+        .sort()
+        .map((s) => ({ label: s, value: s }))
+)
+
+const filtered = computed(() => {
+    let result = allActivities.value
+
+    if (selectedYears.value.length > 0)
+        result = result.filter((a) => selectedYears.value.includes(a.year))
+    if (selectedMonths.value.length > 0)
+        result = result.filter((a) => selectedMonths.value.includes(a.month))
+    if (selectedSports.value.length > 0)
+        result = result.filter((a) => selectedSports.value.includes(a.sport_type))
+    if (commuteOnly.value)
+        result = result.filter((a) => a.commute)
+
+    const q = search.value.trim().toLowerCase()
+    if (q) result = result.filter((a) =>
+        a.name.toLowerCase().includes(q) || a.sport_type.toLowerCase().includes(q)
+    )
+
+    return result
 })
 
-watch(monthOptions, (opts) => {
-    if (selectedMonth.value === null && opts.length > 0) {
-        selectedMonth.value = opts[0]?.value ?? null
-    }
-}, { immediate: true })
-
-async function loadActivities() {
-    if (!selectedMonth.value || selectedYears.value.length === 0) return
-    loading.value = true
-    try {
-        const results = await Promise.all(
-            selectedYears.value.map((y) => fetchActivitiesByMonth(y, selectedMonth.value!))
-        )
-        activities.value = results.flat().sort((a, b) => a.date.localeCompare(b.date))
-    } finally {
-        loading.value = false
-    }
-}
-
-watch([selectedYears, selectedMonth], loadActivities, { deep: true })
+const totalKm = computed(() =>
+    filtered.value.reduce((sum, a) => sum + a.distance_km, 0).toFixed(1)
+)
 
 function formatDuration(seconds: number): string {
     const h = Math.floor(seconds / 3600)
@@ -63,18 +80,39 @@ function formatDuration(seconds: number): string {
         : `${m}m${String(s).padStart(2, '0')}`
 }
 
-const totalKm = computed(() =>
-    activities.value.reduce((sum, a) => sum + a.distance_km, 0).toFixed(1)
-)
+function clearFilters() {
+    search.value = ''
+    selectedYears.value = []
+    selectedMonths.value = []
+    selectedSports.value = []
+    commuteOnly.value = false
+}
 
-function getYear(date: string) { return date.slice(0, 4) }
-function getMonth(date: string) { return (MONTH_NAMES[parseInt(date.slice(5, 7)) - 1] ?? '').slice(0, 3) }
-function getDay(date: string) { return date.slice(8, 10) }
+const hasActiveFilters = computed(() =>
+    search.value || selectedYears.value.length || selectedMonths.value.length ||
+    selectedSports.value.length || commuteOnly.value
+)
 </script>
 
 <template>
     <div class="p-4 flex flex-col gap-4">
-        <div class="flex items-center gap-3 flex-wrap">
+        <!-- Filter bar -->
+        <div class="flex flex-wrap gap-2 items-center">
+            <IconField>
+                <InputIcon class="pi pi-search" />
+                <InputText
+                    v-model="search"
+                    placeholder="Search name, sport…"
+                    class="w-48"
+                />
+                <InputIcon
+                    v-if="search"
+                    class="pi pi-times cursor-pointer"
+                    style="pointer-events:auto"
+                    @click="search = ''"
+                />
+            </IconField>
+
             <MultiSelect
                 v-model="selectedYears"
                 :options="yearOptions"
@@ -82,63 +120,94 @@ function getDay(date: string) { return date.slice(8, 10) }
                 optionValue="value"
                 placeholder="Years"
                 display="chip"
-                class="w-60"
+                class="w-48"
             />
-            <Select
-                v-model="selectedMonth"
+
+            <MultiSelect
+                v-model="selectedMonths"
                 :options="monthOptions"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Month"
-                class="w-36"
+                placeholder="Months"
+                display="chip"
+                class="w-52"
             />
-            <span v-if="activities.length > 0" class="text-surface-400 text-sm ml-2">
-                {{ activities.length }} activities — {{ totalKm }} km total
+
+            <MultiSelect
+                v-model="selectedSports"
+                :options="sportOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Sport types"
+                display="chip"
+                class="w-52"
+            />
+
+            <button
+                :class="[
+                    'px-3 py-1.5 rounded text-sm border transition-colors',
+                    commuteOnly
+                        ? 'bg-amber-500 border-amber-500 text-white'
+                        : 'border-surface-600 text-surface-300 hover:border-amber-500'
+                ]"
+                @click="commuteOnly = !commuteOnly"
+            >
+                Commute only
+            </button>
+
+            <button
+                v-if="hasActiveFilters"
+                class="px-3 py-1.5 rounded text-sm text-surface-400 hover:text-surface-100 transition-colors"
+                @click="clearFilters"
+            >
+                <i class="pi pi-times mr-1" />Clear
+            </button>
+
+            <span class="text-surface-400 text-sm ml-auto">
+                {{ filtered.length }} activities — {{ totalKm }} km
             </span>
         </div>
 
+        <!-- Table -->
         <DataTable
-            :value="activities"
+            :value="filtered"
             :loading="loading"
             size="small"
-            class="text-sm"
             stripedRows
+            scrollable
+            scrollHeight="calc(100vh - 180px)"
+            :virtualScrollerOptions="{ itemSize: 36 }"
+            sortField="date"
+            :sortOrder="1"
+            class="text-sm"
         >
-            <Column header="Year" style="width: 70px">
-                <template #body="{ data }">{{ getYear(data.date) }}</template>
+            <Column field="year" header="Year" sortable style="width: 70px" />
+            <Column field="month" header="Month" sortable style="width: 75px">
+                <template #body="{ data }">{{ MONTH_NAMES[data.month - 1] }}</template>
             </Column>
-            <Column header="Month" style="width: 80px">
-                <template #body="{ data }">{{ getMonth(data.date) }}</template>
-            </Column>
-            <Column header="Day" style="width: 60px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
-                <template #body="{ data }">{{ getDay(data.date) }}</template>
-            </Column>
-            <Column header="Start" style="width: 70px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
-                <template #body="{ data }">{{ data.start_time }}</template>
-            </Column>
-            <Column header="End" style="width: 70px"
-                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
-                <template #body="{ data }">{{ data.end_time }}</template>
-            </Column>
-            <Column field="name" header="Name" />
-            <Column field="sport_type" header="Sport" style="width: 120px" />
-            <Column field="distance_km" header="Dist (km)" style="width: 90px"
+            <Column field="day" header="Day" sortable style="width: 60px"
+                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
+            <Column field="start_time" header="Start" style="width: 70px"
+                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
+            <Column field="end_time" header="End" style="width: 70px"
+                :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }" />
+            <Column field="name" header="Name" sortable />
+            <Column field="sport_type" header="Sport" sortable style="width: 120px" />
+            <Column field="distance_km" header="Dist (km)" sortable style="width: 90px"
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }" />
-            <Column header="Duration" style="width: 90px"
+            <Column field="moving_time_s" header="Duration" sortable style="width: 90px"
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }">
                 <template #body="{ data }">{{ formatDuration(data.moving_time_s) }}</template>
             </Column>
-            <Column field="avg_speed_kmh" header="Avg km/h" style="width: 90px"
+            <Column field="avg_speed_kmh" header="km/h" sortable style="width: 75px"
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }" />
-            <Column field="elevation_m" header="Elev (m)" style="width: 80px"
+            <Column field="elevation_m" header="Elev (m)" sortable style="width: 80px"
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }" />
-            <Column field="avg_heartrate" header="HR" style="width: 70px"
+            <Column field="avg_heartrate" header="HR" sortable style="width: 65px"
                 :pt="{ headerCell: { class: 'text-right' }, bodyCell: { class: 'text-right' } }">
                 <template #body="{ data }">{{ data.avg_heartrate ?? '—' }}</template>
             </Column>
-            <Column header="Commute" style="width: 80px"
+            <Column field="commute" header="Commute" sortable style="width: 85px"
                 :pt="{ headerCell: { class: 'text-center' }, bodyCell: { class: 'text-center' } }">
                 <template #body="{ data }">{{ data.commute ? '✓' : '' }}</template>
             </Column>

@@ -20,6 +20,36 @@ MONTH_NAMES = [
 ]
 
 
+@router.get("/all-detail")
+async def get_all_activities_detail():
+    """Return all activities with detail fields, sorted chronologically."""
+    activities = get_activities()
+    result = []
+    for a in activities:
+        start_dt = datetime.fromisoformat(a["start_date_local"].replace("Z", "+00:00"))
+        elapsed = a.get("elapsed_time", 0)
+        end_dt = start_dt + timedelta(seconds=elapsed)
+        result.append({
+            "id": a.get("id"),
+            "date": a["start_date_local"][:10],
+            "year": start_dt.year,
+            "month": start_dt.month,
+            "day": start_dt.day,
+            "start_time": start_dt.strftime("%H:%M"),
+            "end_time": end_dt.strftime("%H:%M"),
+            "name": a.get("name"),
+            "sport_type": a.get("sport_type"),
+            "distance_km": round(a.get("distance", 0) / 1000, 2),
+            "moving_time_s": a.get("moving_time", 0),
+            "elevation_m": a.get("total_elevation_gain", 0),
+            "avg_speed_kmh": round(a.get("average_speed", 0) * 3.6, 1),
+            "avg_heartrate": a.get("average_heartrate"),
+            "commute": a.get("commute", False),
+        })
+    result.sort(key=lambda x: x["date"])
+    return result
+
+
 @router.get("/by-month")
 async def get_activities_by_month(year: int, month: int):
     """Return detailed activities for a given year/month, sorted chronologically."""
