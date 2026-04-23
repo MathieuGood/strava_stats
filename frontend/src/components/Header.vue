@@ -32,6 +32,13 @@ async function fetchData() {
             <router-link to="/" class="text-surface-0 hover:text-primary">Home</router-link>
             <router-link to="/charts" class="text-surface-0 hover:text-primary">Charts</router-link>
             <router-link to="/reports" class="text-surface-0 hover:text-primary">Reports</router-link>
+            <a
+                href="/api/activities/export"
+                download="activities.json"
+                class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-sm"
+            >
+                Export JSON
+            </a>
             <button
                 @click="fetchData"
                 :disabled="loading"

@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from anyio import to_thread
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from api.loader import DATA_PATH, get_activities, load_activities
 from strava import ActivityStorage, CommuteDetector, CommuteReport, StravaAuth, StravaClient
@@ -18,6 +18,12 @@ MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ]
+
+
+@router.get("/export")
+async def export_activities():
+    """Download the raw activities.json file."""
+    return FileResponse(DATA_PATH, media_type="application/json", filename="activities.json")
 
 
 @router.get("/monthly-totals")
