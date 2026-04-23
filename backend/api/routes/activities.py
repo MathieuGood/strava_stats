@@ -42,7 +42,7 @@ async def get_all_activities_detail():
             "avg_heartrate": a.get("average_heartrate"),
             "commute": a.get("commute", False),
         })
-    result.sort(key=lambda x: x["date"])
+    result.sort(key=lambda x: x["datetime"])
     return result
 
 
