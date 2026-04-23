@@ -31,6 +31,7 @@ async function fetchData() {
         <nav class="flex gap-4 items-center">
             <router-link to="/" class="text-surface-0 hover:text-primary">Home</router-link>
             <router-link to="/charts" class="text-surface-0 hover:text-primary">Charts</router-link>
+            <router-link to="/activities" class="text-surface-0 hover:text-primary">Activities</router-link>
             <router-link to="/reports" class="text-surface-0 hover:text-primary">Reports</router-link>
             <a
                 href="/api/activities/export"

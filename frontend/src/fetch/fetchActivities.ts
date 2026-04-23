@@ -35,6 +35,25 @@ export const fetchCommuteMonths = async (): Promise<CommuteMonth[]> => {
     return response.json()
 }
 
+export interface ActivityDetail {
+    id: number
+    date: string
+    name: string
+    sport_type: string
+    distance_km: number
+    moving_time_s: number
+    elevation_m: number
+    avg_speed_kmh: number
+    avg_heartrate: number | null
+    commute: boolean
+}
+
+export const fetchActivitiesByMonth = async (year: number, month: number): Promise<ActivityDetail[]> => {
+    const response = await fetch(`${API_URL}${ACTIVITIES_ENDPOINT}/by-month?year=${year}&month=${month}`)
+    if (!response.ok) throw new Error('Failed to fetch activities')
+    return response.json()
+}
+
 export const downloadReport = async (year: number, month: number): Promise<void> => {
     const response = await fetch(
         `${API_URL}${ACTIVITIES_ENDPOINT}/report?year=${year}&month=${month}`,
