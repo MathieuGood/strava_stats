@@ -38,6 +38,8 @@ export const fetchCommuteMonths = async (): Promise<CommuteMonth[]> => {
 export interface ActivityDetail {
     id: number
     date: string
+    start_time: string
+    end_time: string
     name: string
     sport_type: string
     distance_km: number

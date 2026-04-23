@@ -1,7 +1,7 @@
 """Routes for activity endpoints."""
 
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from urllib.parse import quote
 
@@ -29,9 +29,14 @@ async def get_activities_by_month(year: int, month: int):
         dt = datetime.fromisoformat(a["start_date_local"].replace("Z", "+00:00"))
         if dt.year != year or dt.month != month:
             continue
+        start_dt = datetime.fromisoformat(a["start_date_local"].replace("Z", "+00:00"))
+        elapsed = a.get("elapsed_time", 0)
+        end_dt = start_dt + timedelta(seconds=elapsed)
         result.append({
             "id": a.get("id"),
             "date": a["start_date_local"][:10],
+            "start_time": start_dt.strftime("%H:%M"),
+            "end_time": end_dt.strftime("%H:%M"),
             "name": a.get("name"),
             "sport_type": a.get("sport_type"),
             "distance_km": round(a.get("distance", 0) / 1000, 2),
