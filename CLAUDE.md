@@ -98,12 +98,31 @@ docker-compose up
 # CLI: fetch all activities from Strava API
 cd backend && uv run main.py --fetch
 
+# CLI: rebuild activities.json from a Strava GDPR data export (see note below)
+cd backend && uv run import_export.py /path/to/strava_export_XXXXXXXX
+
 # CLI: generate monthly Excel report
 cd backend && uv run main.py --report YYYY-MM
 
 # Re-authorize Strava from scratch (if tokens are fully invalid)
 cd backend && uv run reauth.py
 ```
+
+---
+
+## Strava API Access — Standard Tier subscription requirement (since 2026-06-30)
+
+Strava now requires the API app owner to have an **active Strava subscription** to use Standard Tier API access (`/athlete/activities` etc.). Without it, every request returns:
+
+```json
+{"message":"Forbidden","errors":[{"resource":"Application","field":"Status","code":"Inactive"}]}
+```
+
+This is not a token/auth bug — `force_refresh()` won't fix it. As long as we don't pay for a subscription, `main.py --fetch` / `POST /activities/fetch` will keep failing with 403.
+
+**Fallback: `import_export.py`.** Rebuilds `activities.json` from a Strava GDPR bulk data export ("Download your data" in Strava account settings — data becomes available for download after some delay). It parses `activities.csv` (French-locale headers/dates) plus the per-activity `.gpx`/`.gpx.gz`/`.tcx.gz`/`.fit.gz` files in `activities/` to reconstruct `start_latlng`/`end_latlng` (not present in the CSV, required for commute detection). Output matches the same schema `main.py --fetch` produces, so `storage.py`/`filter.py`/`stats.py`/`commute.py`/`report.py` and the API routes all work unchanged.
+
+To refresh prod: run the script locally, then `scp backend/activities.json` to the VPS (`~/apps/strava_stats/backend/activities.json`) and restart the backend container (`docker compose -f docker-compose.prod.yml restart backend`) — there is no reload endpoint, the cache only loads at startup.
 
 ---
 
@@ -120,7 +139,7 @@ cd backend && uv run reauth.py
 
 ## Dependencies
 
-**Backend:** Python 3.12+, `fastapi`, `uvicorn`, `requests`, `openpyxl`, `python-dotenv`, `tzdata`, `anyio`
+**Backend:** Python 3.12+, `fastapi`, `uvicorn`, `requests`, `openpyxl`, `python-dotenv`, `tzdata`, `anyio`, `fitdecode` (used by `import_export.py` to parse `.fit.gz` export files)
 
 **Frontend:** Vue 3, Vite, TypeScript, Tailwind CSS, PrimeVue, ECharts, vue-echarts
 
