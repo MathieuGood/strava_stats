@@ -126,6 +126,14 @@ This is not a token/auth bug — `force_refresh()` won't fix it. As long as we d
 
 **Fallback: `import_export.py`.** Rebuilds `activities.json` from a Strava GDPR bulk data export ("Download your data" in Strava account settings — data becomes available for download after some delay). It parses `activities.csv` (French-locale headers/dates) plus the per-activity `.gpx`/`.gpx.gz`/`.tcx.gz`/`.fit.gz` files in `activities/` to reconstruct `start_latlng`/`end_latlng` (not present in the CSV, required for commute detection). Output matches the same schema `main.py --fetch` produces, so `storage.py`/`filter.py`/`stats.py`/`commute.py`/`report.py` and the API routes all work unchanged.
 
+**Always check the export is complete before trusting it.** A GDPR export only
+contains what Strava had bundled when it built the archive, so the most recent
+rides are routinely missing — and a report generated from a truncated export
+silently under-reports km for that period. `import_export.py` prints the
+per-month counts and the most recent activity date at the end of its run:
+compare them against what the Strava app shows, and only then generate reports.
+If the tail is short, request a fresh export rather than sending a report.
+
 To refresh prod: run the script locally, then `scp backend/activities.json` to the VPS (`~/apps/strava_stats/backend/activities.json`) and restart the backend container (`docker compose -f docker-compose.prod.yml restart backend`) — there is no reload endpoint, the cache only loads at startup.
 
 ---

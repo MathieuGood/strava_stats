@@ -15,6 +15,7 @@ import csv
 import gzip
 import io
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -185,6 +186,36 @@ def build_activity(row: list[str], export_dir: Path) -> dict | None:
     }
 
 
+def print_completeness(activities: list[dict], months: int = 4):
+    """Summarise the tail of the export so it can be checked against Strava.
+
+    A GDPR export is only as fresh as the moment Strava built it, and the
+    last weeks are the ones that go missing. Print the recent months so the
+    counts can be compared with what the Strava app actually shows before
+    any report is generated from this data.
+    """
+    if not activities:
+        print("No activities in the export.")
+        return
+
+    per_month = defaultdict(int)
+    for a in activities:
+        per_month[a["start_date_local"][:7]] += 1
+
+    recent = sorted(per_month)[-months:]
+    last_date = activities[-1]["start_date_local"][:10]
+
+    print("\nActivities per month (tail of the export):")
+    for ym in recent:
+        print(f"  {ym}: {per_month[ym]}")
+    print(f"Most recent activity: {last_date}")
+    print(
+        "\n  CHECK: compare these counts with the Strava app before generating\n"
+        "  reports. An export built before your last rides will silently be\n"
+        "  missing them, and a report for that period will under-report km."
+    )
+
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: uv run import_export.py /path/to/strava_export_XXXXXXXX")
@@ -220,6 +251,8 @@ def main():
     n_commutes = sum(1 for a in activities if a["commute"])
     n_with_latlng = sum(1 for a in activities if a["start_latlng"])
     print(f"Done: {len(activities)} activities, {n_with_latlng} with GPS, {n_commutes} detected commutes.")
+
+    print_completeness(activities)
 
 
 if __name__ == "__main__":
