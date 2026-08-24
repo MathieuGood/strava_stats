@@ -3,8 +3,40 @@ import sys
 
 from strava import StravaAuth, StravaClient, ActivityStorage, ActivityStats
 from strava import CommuteDetector, CommuteReport
+from strava import iter_periods, period_bounds
 
 DATA_DIR = os.path.dirname(__file__)
+
+
+def parse_period(text: str) -> tuple[int, int]:
+    """Parse "YYYY-MM" into a (year, month) reporting period."""
+    try:
+        year, month = text.split("-")
+        year, month = int(year), int(month)
+    except ValueError:
+        raise ValueError(f"Invalid period {text!r}. Use YYYY-MM")
+    if not 1 <= month <= 12:
+        raise ValueError(f"Invalid month in {text!r}. Use YYYY-MM")
+    return year, month
+
+
+def parse_periods(args: list[str]) -> list[tuple[int, int]]:
+    """Expand CLI arguments into reporting periods.
+
+    Accepts single periods ("2026-04"), ranges ("2026-04..2026-07"), or any
+    mix of both. The result is de-duplicated and sorted.
+    """
+    periods: list[tuple[int, int]] = []
+    for arg in args:
+        if ".." in arg:
+            first, _, last = arg.partition("..")
+            start, end = parse_period(first), parse_period(last)
+            if end < start:
+                raise ValueError(f"Invalid range {arg!r}: end is before start")
+            periods.extend(iter_periods(start, end))
+        else:
+            periods.append(parse_period(arg))
+    return sorted(set(periods))
 
 
 def main():
@@ -20,36 +52,45 @@ def main():
     # Check for --report flag
     if "--report" in sys.argv:
         idx = sys.argv.index("--report")
-        if idx + 1 >= len(sys.argv):
-            print("Usage: --report YYYY-MM")
+        args = []
+        for arg in sys.argv[idx + 1 :]:
+            if arg.startswith("--"):
+                break
+            args.append(arg)
+        if not args:
+            print("Usage: --report YYYY-MM [YYYY-MM ...] | --report YYYY-MM..YYYY-MM")
             sys.exit(1)
-        year_month = sys.argv[idx + 1]
+
         try:
-            year, month = year_month.split("-")
-            year, month = int(year), int(month)
-        except ValueError:
-            print("Invalid format. Use --report YYYY-MM")
+            periods = parse_periods(args)
+        except ValueError as e:
+            print(e)
             sys.exit(1)
 
         activities = storage.load()
         detector = CommuteDetector()
-        commutes = detector.get_commute_activities(activities)
-        # Filter to requested month
-        commutes = [
-            c for c in commutes if c["date"].year == year and c["date"].month == month
-        ]
+        all_commutes = detector.get_commute_activities(activities)
 
-        if not commutes:
-            print(f"No commute activities found for {year}-{month:02d}")
-            sys.exit(0)
+        for year, month in periods:
+            start_date, end_date = period_bounds(year, month)
+            commutes = [c for c in all_commutes if start_date <= c["date"] <= end_date]
 
-        report = CommuteReport(commutes, year, month)
-        filepath = report.generate(output_dir=os.path.join(DATA_DIR, "reports"))
-        print(
-            f"Generated report with {len(commutes)} trips over {len(set(c['date'] for c in commutes))} days"
-        )
-        print(f"Total distance: {sum(c['distance_km'] for c in commutes):.1f} km")
-        print(f"Saved to: {filepath}")
+            if not commutes:
+                print(
+                    f"{year}-{month:02d}: no commute activities between "
+                    f"{start_date:%d/%m/%Y} and {end_date:%d/%m/%Y} - skipped"
+                )
+                continue
+
+            report = CommuteReport(commutes, year, month)
+            filepath = report.generate(output_dir=os.path.join(DATA_DIR, "reports"))
+            days = len(set(c["date"] for c in commutes))
+            total_km = sum(c["distance_km"] for c in commutes)
+            print(
+                f"{year}-{month:02d} ({start_date:%d/%m} -> {end_date:%d/%m}): "
+                f"{len(commutes)} trips over {days} days, {total_km:.1f} km "
+                f"-> {filepath}"
+            )
         return
 
     # Stats on all activities

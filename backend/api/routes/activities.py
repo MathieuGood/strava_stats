@@ -1,7 +1,7 @@
 """Routes for activity endpoints."""
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from io import BytesIO
 from urllib.parse import quote
 
@@ -10,7 +10,15 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
 from api.loader import DATA_PATH, get_activities, load_activities
-from strava import ActivityStorage, CommuteDetector, CommuteReport, StravaAuth, StravaClient
+from strava import (
+    ActivityStorage,
+    CommuteDetector,
+    CommuteReport,
+    StravaAuth,
+    StravaClient,
+    period_bounds,
+    period_of_date,
+)
 
 router = APIRouter(prefix="/activities", tags=["activities"])
 
@@ -127,21 +135,6 @@ async def fetch_from_strava():
     return {"fetched": count}
 
 
-def _period_of_date(d: date) -> tuple[int, int]:
-    """Return the (year, month) reporting period a date belongs to.
-
-    Periods run from the 21st of the previous month to the 20th of the returned month.
-    E.g. Dec 22 → (year+1 if Dec, 1) = January of next year.
-         Jan 5  → (year, 1) = January.
-         Jan 21 → (year, 2) = February.
-    """
-    if d.day >= 21:
-        if d.month == 12:
-            return d.year + 1, 1
-        return d.year, d.month + 1
-    return d.year, d.month
-
-
 @router.get("/commute-months")
 async def get_commute_months():
     """Return the list of reporting periods that contain commute activities."""
@@ -151,7 +144,7 @@ async def get_commute_months():
 
     periods: set[tuple[int, int]] = set()
     for c in commutes:
-        periods.add(_period_of_date(c["date"]))
+        periods.add(period_of_date(c["date"]))
 
     return [
         {"year": y, "month": m, "label": f"{MONTH_NAMES[m - 1]} {y}"}
@@ -166,10 +159,7 @@ async def download_report(year: int, month: int):
     detector = CommuteDetector()
     commutes = detector.get_commute_activities(activities)
 
-    prev_month = 12 if month == 1 else month - 1
-    prev_year = year - 1 if month == 1 else year
-    start_date = date(prev_year, prev_month, 21)
-    end_date = date(year, month, 20)
+    start_date, end_date = period_bounds(year, month)
 
     filtered = [c for c in commutes if start_date <= c["date"] <= end_date]
 

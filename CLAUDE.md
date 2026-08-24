@@ -34,6 +34,7 @@ strava_stats/
 │       ├── commute.py       # Commute detection (haversine + work hours)
 │       ├── config.py        # City coordinates, thresholds, rate
 │       ├── filter.py        # Fluent activity filtering (sport, year, date range)
+│       ├── period.py        # Reporting periods (21st prev month → 20th)
 │       ├── report.py        # Excel (.xlsx) report generation via openpyxl
 │       ├── sports.py        # Sport alias normalization (e.g. "biking" → "Ride")
 │       ├── stats.py         # Statistics (km by sport, year, chainable filters)
@@ -77,7 +78,8 @@ Reports run from the **21st of the previous month** to the **20th of the selecte
 - "January 2026" → Dec 21 2025 → Jan 20 2026
 - An activity on Dec 22 belongs to the January period; Dec 15 belongs to December.
 
-This applies to both the CLI (`--report YYYY-MM`) and the web `/activities/report` endpoint.
+This applies to both the CLI (`--report YYYY-MM`) and the web `/activities/report` endpoint —
+both go through `period_bounds()` / `period_of_date()` in `backend/strava/period.py`.
 
 ---
 
@@ -101,8 +103,10 @@ cd backend && uv run main.py --fetch
 # CLI: rebuild activities.json from a Strava GDPR data export (see note below)
 cd backend && uv run import_export.py /path/to/strava_export_XXXXXXXX
 
-# CLI: generate monthly Excel report
+# CLI: generate monthly Excel report(s) — one month, several, or a range
 cd backend && uv run main.py --report YYYY-MM
+cd backend && uv run main.py --report 2026-04 2026-05 2026-06
+cd backend && uv run main.py --report 2026-04..2026-07
 
 # Re-authorize Strava from scratch (if tokens are fully invalid)
 cd backend && uv run reauth.py
